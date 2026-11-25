@@ -1,0 +1,33 @@
+{
+  "name": "lens",
+  "version": "1.0.0",
+  "private": true,
+  "description": "LENS — Website Intelligence & Audit Platform",
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck",
+    "analyze:cli": "tsx scripts/analyze.ts"
+  },
+  "dependencies": {
+    "@sparticuz/chromium": "^138.0.2",
+    "cheerio": "^1.0.0",
+    "lucide-react": "^0.468.0",
+    "next": "15.5.29",
+    "puppeteer-core": "^24.10.0",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "puppeteer": "^24.10.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
