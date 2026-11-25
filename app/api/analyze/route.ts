@@ -77,12 +77,19 @@ export async function POST(request: Request) {
       }, 15_000);
 
       try {
-        const report = await runAnalysis({
-          input: payload.url as string,
-          onProgress: (event) => send(event),
-          signal: request.signal,
-          budgetMs: 46_000,
-        });
+        // Hard wall-clock cap: if a stage hangs anyway, answer with a real error
+        // instead of letting the platform terminate the stream mid-flight.
+        const report = await Promise.race([
+          runAnalysis({
+            input: payload.url as string,
+            onProgress: (event) => send(event),
+            signal: request.signal,
+            budgetMs: 44_000,
+          }),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("timeout: the analysis exceeded its time budget")), 52_000),
+          ),
+        ]);
 
         // A non-durable store keeps the report only inside this server instance,
         // so the client must not treat the report as linkable.

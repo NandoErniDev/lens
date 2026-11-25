@@ -160,10 +160,13 @@ export interface CollectOptions {
   timeoutMs?: number;
   withScreenshots?: boolean;
   signal?: AbortSignal;
+  /** Wall-clock deadline (epoch ms). Remaining work is skipped rather than overrunning it. */
+  deadline?: number;
 }
 
 export async function collectPage(options: CollectOptions): Promise<PageSnapshot> {
-  const { url, browser, browserVersion, timeoutMs = 30_000, withScreenshots = true, signal } = options;
+  const { url, browser, browserVersion, timeoutMs = 30_000, withScreenshots = true, signal, deadline } = options;
+  const msLeft = () => (typeof deadline === "number" ? deadline - Date.now() : Number.POSITIVE_INFINITY);
   const page = await browser.newPage();
   const consoleErrors: { message: string; url: string | null }[] = [];
   const failedRequests: { url: string; error: string }[] = [];
@@ -255,8 +258,8 @@ export async function collectPage(options: CollectOptions): Promise<PageSnapshot
     throw new NavigationError("Analysis cancelled", "cancelled");
   }
 
-  await page.waitForNetworkIdle({ idleTime: 1200, timeout: 6000 }).catch(() => undefined);
-  await new Promise((resolve) => setTimeout(resolve, 1200));
+  await page.waitForNetworkIdle({ idleTime: 1200, timeout: Math.max(800, Math.min(6000, msLeft())) }).catch(() => undefined);
+  if (msLeft() > 4000) await new Promise((resolve) => setTimeout(resolve, 1200));
 
   const lab = await readMetrics(page);
   const html = await page.content().catch(() => "");
@@ -300,6 +303,19 @@ export async function collectPage(options: CollectOptions): Promise<PageSnapshot
 
   for (const viewport of VIEWPORTS) {
     if (signal?.aborted) break;
+    if (msLeft() < 4500) {
+      captures.push({
+        id: viewport.id,
+        label: viewport.label,
+        width: viewport.width,
+        height: viewport.height,
+        deviceScaleFactor: viewport.dpr,
+        screenshot: null,
+        screenshotNote: "Not rendered — the analysis time budget was reached before this viewport.",
+        audit: null,
+      });
+      continue;
+    }
     try {
       await page.setViewport({
         width: viewport.width,

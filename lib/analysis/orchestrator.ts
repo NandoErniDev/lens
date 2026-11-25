@@ -125,6 +125,15 @@ export async function runAnalysis(options: AnalyzeOptions): Promise<Report> {
     browserError = message.slice(0, 160);
   }
 
+  // Budget: the browser phase must finish early enough that the remaining checks
+  // still fit inside the serverless limit, even on slow or bot-protected pages.
+  const collectBudget = deadline - Date.now() - 14_000;
+  if (browser && collectBudget < 12_000) {
+    await browser.browser.close().catch(() => undefined);
+    browser = null;
+    browserError = "Not enough time remained to render the page in a browser.";
+  }
+
   if (browser) {
     try {
       emit("performance");
@@ -132,9 +141,10 @@ export async function runAnalysis(options: AnalyzeOptions): Promise<Report> {
         url: parsed.url.toString(),
         browser: browser.browser,
         browserVersion: browser.browserVersion,
-        timeoutMs: Math.min(28_000, Math.max(8_000, deadline - Date.now() - 16_000)),
+        timeoutMs: Math.min(20_000, Math.max(8_000, collectBudget)),
         withScreenshots: true,
         signal: options.signal,
+        deadline: deadline - 11_000,
       });
       emit("mobile");
     } catch (error) {
@@ -178,7 +188,7 @@ export async function runAnalysis(options: AnalyzeOptions): Promise<Report> {
   emit("seo");
   const seo = await withTimeout(
     buildSeo({ audit, finalUrl, origin: new URL(finalUrl).origin, status, signal: options.signal }),
-    Math.max(6_000, deadline - Date.now() - 12_000),
+    Math.max(2_500, deadline - Date.now() - 10_000),
     {
       score: null,
       coverage: 0,
@@ -231,10 +241,10 @@ export async function runAnalysis(options: AnalyzeOptions): Promise<Report> {
       candidates,
       origin: new URL(finalUrl).origin,
       finalUrl,
-      budgetMs: Math.max(5_000, Math.min(16_000, deadline - Date.now() - 10_000)),
+      budgetMs: Math.max(2_500, Math.min(12_000, deadline - Date.now() - 6_000)),
       signal: options.signal,
     }),
-    Math.max(6_000, deadline - Date.now() - 6_000),
+    Math.max(2_500, deadline - Date.now() - 3_500),
     {
       score: null,
       coverage: 0,
@@ -256,7 +266,7 @@ export async function runAnalysis(options: AnalyzeOptions): Promise<Report> {
   emit("security");
   const security = await withTimeout(
     buildSecurity({ finalUrl, headers, mixedContent: audit.mixedContent }),
-    Math.max(6_000, deadline - Date.now() - 2_000),
+    Math.max(2_000, deadline - Date.now() - 1_500),
     {
       score: null,
       coverage: 0,
