@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getReportStore } from "@/lib/store/reports";
 import { ReportView } from "@/components/report-view";
+import { LocalReportLoader } from "@/components/local-report-loader";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,12 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
 
   const store = getReportStore();
   const report = await store.get(id).catch(() => null);
-  if (!report) notFound();
+  if (!report) {
+    // Nothing durable on this instance: the report may still exist in the
+    // browser archive that ran the analysis.
+    if (!store.durable) return <LocalReportLoader id={id} />;
+    notFound();
+  }
 
   const all = await store.list(40).catch(() => []);
   const history = all.filter((item) => item.id !== report.id && item.host === report.host).slice(0, 8);
