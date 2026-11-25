@@ -290,6 +290,13 @@ export async function runAnalysis(options: AnalyzeOptions): Promise<Report> {
 
   emit("scoring");
 
+  const skippedViewports = (snapshot?.captures ?? []).filter((capture) => !capture.audit).map((capture) => capture.label);
+  if (skippedViewports.length) {
+    notes.push(
+      `The time budget expired before ${skippedViewports.join(", ")} could be rendered. Those viewport checks are reported as not assessed, not as failures.`,
+    );
+  }
+
   const coverage = {
     browser: Boolean(snapshot),
     fieldData: false,
@@ -308,7 +315,10 @@ export async function runAnalysis(options: AnalyzeOptions): Promise<Report> {
     themeColor: audit.meta.themeColor,
     createdAt: new Date().toISOString(),
     durationMs: Date.now() - started,
-    status: coverage.browser && links.section.available && seo.section.available ? "complete" : "partial",
+    status:
+      coverage.browser && links.section.available && seo.section.available && skippedViewports.length === 0
+        ? "complete"
+        : "partial",
     coverage,
     performance: performance.section,
     mobile: mobile.section,
