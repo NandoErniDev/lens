@@ -84,7 +84,10 @@ export async function POST(request: Request) {
           budgetMs: 46_000,
         });
 
-        const persisted = await store.save(report).catch(() => false);
+        // A non-durable store keeps the report only inside this server instance,
+        // so the client must not treat the report as linkable.
+        const saved = await store.save(report).catch(() => false);
+        const persisted = saved && store.durable;
 
         send({
           type: "done",
