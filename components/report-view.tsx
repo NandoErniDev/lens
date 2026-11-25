@@ -93,7 +93,9 @@ export function ReportView({
   shareable?: boolean;
   portable?: boolean;
 }) {
-  const faviconUrl = report.favicon ?? resolveFavicon(report.origin);
+  // Only a favicon captured during analysis is shown: guessing /favicon.ico
+  // renders a broken image for sites that serve it from another path.
+  const faviconUrl = report.favicon;
   const timestamp = new Date(report.createdAt);
   const severityTotals = report.findings.reduce<Record<string, number>>((acc, item) => {
     acc[item.severity] = (acc[item.severity] ?? 0) + 1;
@@ -571,10 +573,4 @@ function CheckListGroup({ checks }: { checks: Check[] }) {
   return <ChecksList checks={checks} />;
 }
 
-function resolveFavicon(origin: string): string | null {
-  try {
-    return `${origin}/favicon.ico`;
-  } catch {
-    return null;
-  }
-}
+

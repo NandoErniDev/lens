@@ -156,7 +156,12 @@ export async function runAnalysis(options: AnalyzeOptions): Promise<Report> {
         `The browser session could not complete for this URL (${browserError}). LENS fell back to static HTML inspection and marked every browser-dependent check as not assessed.`,
       );
     } finally {
-      await browser.browser.close().catch(() => undefined);
+      // A throttled or wedged renderer can make close() hang; never let that
+      // consume the remaining time budget.
+      await Promise.race([
+        browser.browser.close().catch(() => undefined),
+        new Promise((resolve) => setTimeout(resolve, 3000)),
+      ]);
     }
   } else if (browserError) {
     notes.push(
