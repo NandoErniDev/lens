@@ -203,7 +203,9 @@ export function ReportView({
               <div className="category-tile-score">
                 <ScoreRing score={category.score} size={76} stroke={5} />
                 <div className="category-tile-meta">
-                  <span className="mono dim">{category.findings} findings</span>
+                  <span className="mono dim">
+                    {category.findings} {category.findings === 1 ? "finding" : "findings"}
+                  </span>
                   <span className="mono dim">{Math.round(category.coverage * 100)}% coverage</span>
                   <span className="mono dim">weight {Math.round(category.weight * 100)}%</span>
                 </div>
